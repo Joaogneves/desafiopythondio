@@ -1,20 +1,21 @@
-menu = """
-    [d] Deposito
-    [s] Sacar
-    [e] Extrato
-    [a] Adicionar Usuario
-    [c] Nova Conta
-    [q] Sair
-"""
-
 saldo = 0
 extrato = []
 saques = 0
 usuario = {}
+usuarios = []
 conta = {}
+contas = []
 
 def exibirMenu():
-    global menu
+    menu = """
+    [d] Deposito
+    [s] Sacar
+    [e] Extrato
+    [u] Adicionar Usuario
+    [c] Nova Conta
+    [l] Listar Contas
+    [q] Sair
+"""
     return menu
 
 def deposito(valor_deposito):
@@ -55,23 +56,52 @@ def gerarExtrato():
     print(f"Saldo: R${saldo:.2f}")
     print("------------------------------")
 
-def cadastrarUsuario():
+def cadastrarUsuario(userName, cpf, dataNascimento, endereco):
     global usuario
-    novoUsuario = {'nome': userName}
-    usuario.update(novoUsuario)
-    res = usuario.get('nome')
-    print("Nome do usuário inserido:", res)
+    global usuarios
+    novoUsuario = {'nome': userName, 'cpf': cpf, 'dataNascimento': dataNascimento, "endereco": endereco}
+    usuarios.append(novoUsuario)
+    print("Usuário cadastrado com sucesso")
  
 
 def getUser(cpf): 
-    for u in usuario:
-        if u     == cpf:
-            return True
-        return False
+    global usuarios
+    for u in usuarios:
+        if u['cpf'] == cpf:
+            return u
+        
+
+    return None
+        
+def cadastrarConta(cpf):
+    AGENCIA = "0001"
+    global conta
+    global contas
+    res = getUser(cpf)
+    if res == None:
+        print("Usuário não cadastrado!")
+        return
+    print(res)
+    nConta = len(contas) + 1
+    conta = {"agencia": AGENCIA, "c/c": nConta, "usuario": res}    
+    contas.append(conta)
+    print("Conta criada com sucesso")
+
+def listarContas():
+    print("----------------------------------------------------------")
+    for c in contas:
+        listaContas = f"""
+        Agência: {c['agencia']},
+        c/c:     {c['c/c']},
+        Titular: {c['usuario']['nome']}
+        """
+        print(listaContas)
+        print("----------------------------------------------------------")
 
 def main():
     while True:
-        opt = input(exibirMenu())
+        print(exibirMenu())
+        opt = input(">>> ")
         if opt == "d":
             valor_deposito = float(input("Qual valor a ser depositado: R$"))
             deposito(valor_deposito)
@@ -80,15 +110,21 @@ def main():
             saque(valor_saque)
         elif opt == "e":
             gerarExtrato()
-        elif opt == "a":
+        elif opt == "u":
             cpf = input("Insira o cpf: ")
-            if getUser(cpf):
+            res = getUser(cpf)
+            if res == None:
                 userName = input("Nome: ")
-                dataNascimento = input("Data de nascimento: ")
+                dataNascimento = input("Data de nascimento (yyyy-MM-dd): ")
                 endereco = input("Endereço: ")
-                cadastrarUsuario(userName, dataNascimento, endereco)
+                cadastrarUsuario(userName, cpf, dataNascimento, endereco)
             else: 
                 print("CPF já cadastrado!")
+        elif opt == "c":
+            cpf = input("Insira o cpf: ")
+            cadastrarConta(cpf)
+        elif opt == "l":
+            listarContas()
         elif opt == "q":
             break
         else:
