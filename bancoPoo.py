@@ -109,3 +109,67 @@ class PessoaFisica(Cliente):
         self.cpf = cpf
         self.nome = nome
         self.dataNascimento = dataNascimento
+
+
+def exibirMenu():
+    menu = """
+[d] Deposito
+[s] Sacar
+[e] Extrato
+[u] Adicionar Usuario
+[c] Nova Conta
+[l] Listar Contas
+[q] Sair
+"""
+    print(menu)
+
+def main():
+    cont = True
+    exibirMenu();
+    while cont:
+        opt = input(">>>")
+        cont = opcao(opt)
+
+def depositar():
+    print("Depositar")
+
+def sacar(): 
+    print("Sacar")
+
+def exibirExtrato():
+    print("Ext")
+
+def addUsuario():
+    print("Add U")
+
+def addConta():
+    print("Add conta")
+
+def listarContas():
+    print("Listar")
+
+def opcao(opt):
+    if opt == "d":
+        depositar()
+        return True
+    elif opt == "s":
+        sacar()
+        return True
+    elif opt == "e":
+        exibirExtrato()
+        return True
+    elif opt == "u":
+        addUsuario()
+        return True
+    elif opt == "c":
+        addConta()
+        return True 
+    elif opt == "l":
+        listarContas()
+        return True
+    elif opt == "q":
+        return False
+    else:
+        return True
+
+main()
