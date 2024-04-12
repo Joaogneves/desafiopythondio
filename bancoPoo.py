@@ -1,35 +1,39 @@
 from abc import ABC, abstractmethod
 
+usuarios = []
+contas = []
+
+
 class Conta:
-    def __init__(self, saldo, numero, agencia, cliente, historico):
-        self.saldo = saldo
-        self.numero = numero
-        self.agencia = agencia
-        self.cliente = cliente
-        self.historico = historico
+    def __init__(self, numero, cliente):
+        self._saldo = 0
+        self._numero = numero
+        self._agencia = "0001"
+        self._cliente = cliente
+        self._historico = Historico()
 
     @property
     def saldo(self):
-        return self.saldo
+        return self._saldo
     @property
     def numero(self):
-        return self.numero
+        return self._numero
     @property
     def agencia(self):
-        return self.agencia
+        return self._agencia
     @property
     def cliente(self):
-        return self.cliente
+        return self._cliente
     @property
     def historico(self):
-        return self.historico
+        return self._historico
 
     @classmethod
-    def novaConta(cls, cliente, numero):
-        return cls(cliente, numero)
+    def novaConta(cls, numero, cliente):
+        return cls(numero, cliente)
 
     def sacar(self, valor):
-        saldo = self.saldo
+        saldo = self._saldo
 
         if valor > saldo:
             print("Operação falhou! Você não tem saldo suficiente.")
@@ -56,20 +60,29 @@ class Conta:
     
 
 class ContaCorrente(Conta):
-    def __init__(self, saldo, numero, agencia, cliente, historico):
-        super().__init__(saldo, numero, agencia, cliente, historico, limite=500, limite_saques=3)
+    def __init__(self, numero, cliente, limite=500, limite_saques=3):
+        super().__init__(numero, cliente)
+        self._limite = limite
+        self._limite_saques = limite_saques
 
+
+    def __str__(self):
+        return f"""\
+Agência:\t{self.agencia}
+C/C:\t\t{self.numero}
+Titular:\t{self.cliente._nome}
+"""
 
 class Historico:
     def __init__(self):
-        self.transacoes = []
+        self._transacoes = []
 
     @property
     def transacoes(self):
-        return self.transacoes
+        return self._transacoes
 
     def adicionarTransacao(self, transacao):
-        self.transacoes.append(transacao)
+        self._transacoes.append(transacao)
 
 
 class Transacao(ABC):
@@ -85,16 +98,16 @@ class Transacao(ABC):
 
 class Cliente:
     def __init__(self, endereco):
-        self.endereco = endereco
-        self.contas = []
+        self._endereco = endereco
+        self._contas = []
 
     @property
     def endreco(self):
-        return self.endereco
+        return self._endereco
     
     @property
     def contas(self):
-        return self.contas
+        return self._contas
     
     def realizarTransacao(self, conta, transacao):
         transacao.registrar(conta)
@@ -106,9 +119,9 @@ class Cliente:
 class PessoaFisica(Cliente):
     def __init__(self, endereco, cpf, nome, dataNascimento):
         super().__init__(endereco)
-        self.cpf = cpf
-        self.nome = nome
-        self.dataNascimento = dataNascimento
+        self._cpf = cpf
+        self._nome = nome
+        self._dataNascimento = dataNascimento
 
 
 def exibirMenu():
@@ -139,16 +152,31 @@ def sacar():
 def exibirExtrato():
     print("Ext")
 
-def addUsuario():
-    print("Add U")
+def addUsuario(userName, cpf, dataNascimento, endereco):
+    novoUsuario = PessoaFisica(cpf=cpf, endereco=endereco, nome=userName, dataNascimento=dataNascimento)
+    usuarios.append(novoUsuario)
+    print("Usuário cadastrado com sucesso")
 
-def addConta():
-    print("Add conta")
+def addConta(usuario, numero):
+    conta = ContaCorrente.novaConta(cliente=usuario, numero=numero)
+    print(conta)
+    contas.append(conta)
+    
 
-def listarContas():
-    print("Listar")
+def listarContas(cpf):
+    print("----------------------------------------------------------")
+    for c in contas:
+        if c.cliente._cpf == cpf:
+            print(c)
+    print("----------------------------------------------------------")
+
+def buscarUsuarios(cpf, usuarios):
+    for u in usuarios:
+        if u._cpf == cpf:
+            return u
 
 def opcao(opt):
+    global usuarios
     if opt == "d":
         depositar()
         return True
@@ -159,13 +187,33 @@ def opcao(opt):
         exibirExtrato()
         return True
     elif opt == "u":
-        addUsuario()
+        cpf = input("Digite um cpf: ")
+        res = buscarUsuarios(cpf, usuarios)
+        if res == None:
+            userName = input("Nome: ")
+            dataNascimento = input("Data de nascimento (yyyy-MM-dd): ")
+            endereco = input("Endereço: ")
+            addUsuario(userName, cpf, dataNascimento, endereco)
+        else:
+            print("CPF já cadastrado")
         return True
     elif opt == "c":
-        addConta()
+        cpf = input("Digite um cpf: ")
+        usuario = buscarUsuarios(cpf, usuarios)
+        if usuario != None:
+            numero = len(contas) + 1
+            addConta(usuario=usuario, numero=numero)
+        else:
+            print("Usuário não encontrado")
         return True 
     elif opt == "l":
-        listarContas()
+        cpf = input("Digite um cpf: ")
+        usuario = buscarUsuarios(cpf=cpf, usuarios=usuarios)
+        if usuario == None:
+            print("Usuário não encontrado")
+        else:    
+            listarContas(cpf)
+        
         return True
     elif opt == "q":
         return False
