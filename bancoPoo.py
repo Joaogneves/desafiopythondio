@@ -3,7 +3,6 @@ from abc import ABC, abstractmethod
 usuarios = []
 contas = []
 
-
 class Conta:
     def __init__(self, numero, cliente):
         self._saldo = 0
@@ -42,7 +41,6 @@ class Conta:
             self._saldo -= valor
             print("Saque realizado com sucesso!")
             return True
-
         else:
             print("Operação falhou! O valor informado é inválido.")
 
@@ -65,12 +63,28 @@ class ContaCorrente(Conta):
         self._limite = limite
         self._limite_saques = limite_saques
 
+    def sacar(self, valor):
+        numero_saques = len(
+            [transacao for transacao in self.historico.transacoes if transacao["tipo"] == Saque.__name__]
+        )
+
+        if valor > self._limite:
+            print("Operação falhou! O valor do saque excede o limite.")
+
+        elif numero_saques >= self._limite_saques:
+            print("Operação falhou! Número máximo de saques excedido.")
+
+        else:
+            return super().sacar(valor)
+
+        return False
+
 
     def __str__(self):
-        return f"""\
-Agência:\t{self.agencia}
-C/C:\t\t{self.numero}
-Titular:\t{self.cliente._nome}
+        return f"""
+Agência: {self.agencia}
+C/C: {self.numero}
+Titular: {self.cliente._nome}
 """
 
 class Historico:
@@ -82,7 +96,10 @@ class Historico:
         return self._transacoes
 
     def adicionarTransacao(self, transacao):
-        self._transacoes.append(transacao)
+        self._transacoes.append({
+                "tipo": transacao.__class__.__name__,
+                "valor": transacao.valor,
+            })
 
 
 class Transacao(ABC):
@@ -95,6 +112,34 @@ class Transacao(ABC):
     def registrar(self, conta):
         pass
 
+class Saque(Transacao):
+    def __init__(self, valor):
+        self._valor = valor
+
+    @property
+    def valor(self):
+        return self._valor
+
+    def registrar(self, conta):
+        sucessoTransacao = conta.sacar(self.valor)
+
+        if sucessoTransacao:
+            conta.historico.adicionarTransacao(self)
+
+
+class Deposito(Transacao):
+    def __init__(self, valor):
+        self._valor = valor
+
+    @property
+    def valor(self):
+        return self._valor
+
+    def registrar(self, conta):
+        sucessoTransacao = conta.depositar(self.valor)
+
+        if sucessoTransacao:
+            conta.historico.adicionarTransacao(self)
 
 class Cliente:
     def __init__(self, endereco):
@@ -143,14 +188,6 @@ def main():
         opt = input(">>>")
         cont = opcao(opt)
 
-def depositar():
-    print("Depositar")
-
-def sacar(): 
-    print("Sacar")
-
-def exibirExtrato():
-    print("Ext")
 
 def addUsuario(userName, cpf, dataNascimento, endereco):
     novoUsuario = PessoaFisica(cpf=cpf, endereco=endereco, nome=userName, dataNascimento=dataNascimento)
@@ -159,15 +196,27 @@ def addUsuario(userName, cpf, dataNascimento, endereco):
 
 def addConta(usuario, numero):
     conta = ContaCorrente.novaConta(cliente=usuario, numero=numero)
-    print(conta)
     contas.append(conta)
+    usuario.contas.append(conta)
+    print("Conta criada com sucesso!")
     
 
 def listarContas(cpf):
+    contasCliente = []
+    cliente = buscarUsuarios(cpf=cpf, usuarios=usuarios)
     print("----------------------------------------------------------")
     for c in contas:
         if c.cliente._cpf == cpf:
-            print(c)
+            contasCliente.append(c)
+    if contasCliente == []:
+        print("Não encontrado contas para esse cliente:")
+        res = input("Deseja adicionar uma nova conta? (s/n)")
+        if res == "s":
+            numero = len(contas) + 1
+            addConta(usuario=cliente, numero=numero)
+    else:
+        for co in contasCliente:
+            print(co)
     print("----------------------------------------------------------")
 
 def buscarUsuarios(cpf, usuarios):
@@ -175,24 +224,91 @@ def buscarUsuarios(cpf, usuarios):
         if u._cpf == cpf:
             return u
 
+def encontrarConta(cpf):
+    for c in contas:
+        if c.cliente._cpf == cpf:
+            return c    
+
+def depositar(cpf):
+    usuario = buscarUsuarios(cpf=cpf, usuarios=usuarios)
+    if not usuario:
+        print("Cliente não encontrado!")
+        return
+
+    valor = float(input("Informe o valor do depósito: R$"))
+    transacao = Deposito(valor)
+
+    conta = encontrarConta(cpf=cpf)
+    if not conta:
+        return
+    
+    usuario.realizarTransacao(conta, transacao)
+
+def sacar(cpf):
+    usuario = buscarUsuarios(cpf=cpf, usuarios=usuarios)
+    if not usuario:
+        print("Cliente não encontrado!")
+        return
+
+    valor = float(input("Informe o valor do saque: R$"))
+    transacao = Saque(valor)
+
+    conta = encontrarConta(cpf=cpf)
+    if not conta:
+        return
+    
+    usuario.realizarTransacao(conta, transacao)
+
+def exibirExtrato(clientes):
+    cpf = input("Informe o CPF do cliente: ")
+    cliente = buscarUsuarios(cpf, clientes)
+
+    if not cliente:
+        print("Cliente não encontrado!")
+        return
+
+    conta = encontrarConta(cpf)
+    if not conta:
+        return
+
+    print("---------------- EXTRATO ----------------")
+    transacoes = conta.historico.transacoes
+
+    extrato = ""
+    if not transacoes:
+        extrato = "Não foram realizadas movimentações."
+    else:
+        for transacao in transacoes:
+            extrato += f"{transacao['tipo']}: R$ {transacao['valor']:.2f}\n"
+            
+
+    print(extrato)
+    print(f"Saldo: R$ {conta.saldo:.2f}")
+    print("----------------------------------------")
+
+
 def opcao(opt):
     global usuarios
     if opt == "d":
-        depositar()
+        cpf = input("Digite um cpf: ")
+        depositar(cpf=cpf)
         return True
     elif opt == "s":
-        sacar()
+        cpf = input("Digite um cpf: ")
+        sacar(cpf=cpf)
         return True
     elif opt == "e":
-        exibirExtrato()
+        exibirExtrato(clientes=usuarios)
         return True
     elif opt == "u":
         cpf = input("Digite um cpf: ")
         res = buscarUsuarios(cpf, usuarios)
         if res == None:
-            userName = input("Nome: ")
-            dataNascimento = input("Data de nascimento (yyyy-MM-dd): ")
-            endereco = input("Endereço: ")
+            print("------------- Novo cliente --------------")
+            print(f"CPF: {cpf}")
+            userName = input("Informe o nome completo: ")
+            dataNascimento = input("Informe a data de nascimento (dd-MM-aaaa): ")
+            endereco = input("Informe o endereço: ")
             addUsuario(userName, cpf, dataNascimento, endereco)
         else:
             print("CPF já cadastrado")
@@ -213,7 +329,6 @@ def opcao(opt):
             print("Usuário não encontrado")
         else:    
             listarContas(cpf)
-        
         return True
     elif opt == "q":
         return False
